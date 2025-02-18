@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Password Viewer",
+  "name": "密码复制助手",
   "version": "1.0",
-  "description": "在密码输入框旁添加查看密码按钮",
+  "description": "在密码输入框左侧添加复制按钮，方便快速复制密码",
+  "homepage_url": "https://github.com/knightgao/copy_passwd",
   "permissions": [
     "activeTab",
     "clipboardWrite"

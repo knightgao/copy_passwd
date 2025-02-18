@@ -13,9 +13,7 @@ function copyText(text) {
   
   try {
     success = document.execCommand('copy');
-    console.log('使用 execCommand 复制' + (success ? '成功' : '失败'));
   } catch (err) {
-    console.error('execCommand 复制出错:', err);
     success = false;
   }
   
@@ -27,16 +25,12 @@ function copyText(text) {
 // 查找所有密码输入框并添加复制按钮
 function addCopyButton() {
   const passwordInputs = document.querySelectorAll('input[type="password"]');
-  console.log('找到密码输入框数量:', passwordInputs.length);
   
   passwordInputs.forEach((input, index) => {
     // 检查是否已经添加过按钮
     if (input.parentElement.querySelector('.password-copy-btn')) {
-      console.log(`密码框 ${index + 1} 已经添加过按钮，跳过`);
       return;
     }
-    
-    console.log(`开始处理第 ${index + 1} 个密码框`);
     
     // 保存输入框的原始样式
     const originalStyles = {
@@ -59,8 +53,6 @@ function addCopyButton() {
     if (originalStyles.width) input.style.width = originalStyles.width;
     if (originalStyles.marginLeft) input.style.marginLeft = originalStyles.marginLeft;
     if (originalStyles.marginRight) input.style.marginRight = originalStyles.marginRight;
-    
-    console.log(`已为密码框 ${index + 1} 创建容器`);
     
     // 创建复制按钮
     const copyBtn = document.createElement('button');
@@ -88,7 +80,6 @@ function addCopyButton() {
     copyBtn.addEventListener('mouseover', () => {
       copyBtn.style.opacity = '1';
       copyBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
-      console.log(`密码框 ${index + 1} 的按钮被悬停`);
     });
     
     copyBtn.addEventListener('mouseout', () => {
@@ -100,11 +91,9 @@ function addCopyButton() {
     copyBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log(`点击了密码框 ${index + 1} 的复制按钮`);
       
       const password = input.value;
       if (!password) {
-        console.log(`密码框 ${index + 1} 为空`);
         copyBtn.innerHTML = '❌';
         copyBtn.title = '密码为空';
         setTimeout(() => {
@@ -121,20 +110,14 @@ function addCopyButton() {
         try {
           await navigator.clipboard.writeText(password);
           success = true;
-          console.log(`密码框 ${index + 1} 使用 Clipboard API 复制成功`);
         } catch (err) {
-          console.log(`Clipboard API 失败，尝试备选方法:`, err);
+          // 如果 Clipboard API 失败，会在下面尝试备选方法
         }
       }
       
       // 如果 Clipboard API 失败，使用备选方法
       if (!success) {
         success = copyText(password);
-        if (success) {
-          console.log(`密码框 ${index + 1} 使用备选方法复制成功`);
-        } else {
-          console.error(`密码框 ${index + 1} 所有复制方法都失败了`);
-        }
       }
       
       // 更新按钮状态
@@ -154,21 +137,16 @@ function addCopyButton() {
     });
     
     wrapper.appendChild(copyBtn);
-    console.log(`密码框 ${index + 1} 处理完成`);
   });
 }
-
-console.log('扩展程序开始运行');
 
 // 初始运行
 addCopyButton();
 
 // 监听 DOM 变化，处理动态加载的密码框
 const observer = new MutationObserver((mutations) => {
-  console.log('检测到 DOM 变化，mutations 数量:', mutations.length);
   mutations.forEach((mutation) => {
     if (mutation.addedNodes.length) {
-      console.log('检测到新节点添加，数量:', mutation.addedNodes.length);
       addCopyButton();
     }
   });
@@ -177,6 +155,4 @@ const observer = new MutationObserver((mutations) => {
 observer.observe(document.body, {
   childList: true,
   subtree: true
-});
-
-console.log('DOM 观察器已启动'); 
+}); 
