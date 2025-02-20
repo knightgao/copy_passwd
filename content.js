@@ -128,11 +128,77 @@ function addPasswordContextMenu() {
   // 当前选中的密码输入框
   let currentPasswordInput = null;
 
+  // 处理复制操作
+  async function handleCopy(input = currentPasswordInput) {
+    if (!input) return;
+    
+    const password = input.value;
+    if (!password) {
+      showToast('密码为空', 'error');
+      return;
+    }
+
+    try {
+      await copyText(password);
+      showToast('已复制到剪贴板');
+    } catch (err) {
+      showToast('复制失败', 'error');
+    }
+    
+    if (menu.style.display === 'block') {
+      menu.style.display = 'none';
+    }
+  }
+
+  // 处理双击事件
+  function handleDoubleClick(e) {
+    const target = e.target;
+    if (target.tagName === 'INPUT' && target.type === 'password') {
+      e.preventDefault();
+      handleCopy(target);
+    }
+  }
+
+  // 处理快捷键
+  function handleKeydown(e) {
+    // 检查是否是密码输入框
+    if (e.target.tagName === 'INPUT' && e.target.type === 'password') {
+      // Ctrl/Command + C 或 Ctrl/Command + Insert
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'Insert')) {
+        e.preventDefault();
+        handleCopy(e.target);
+      }
+    }
+  }
+
+  // 为所有密码输入框添加事件监听
+  function addEventsToPasswordInputs() {
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    passwordInputs.forEach(input => {
+      // 移除可能存在的旧事件监听器
+      input.removeEventListener('contextmenu', handleContextMenu, true);
+      input.removeEventListener('dblclick', handleDoubleClick);
+      input.removeEventListener('keydown', handleKeydown);
+      
+      // 添加新的事件监听器
+      input.addEventListener('contextmenu', handleContextMenu, true);
+      input.addEventListener('dblclick', handleDoubleClick);
+      input.addEventListener('keydown', handleKeydown);
+    });
+  }
+
   // 处理右键菜单事件
   function handleContextMenu(e) {
     const target = e.target;
     if (target.tagName === 'INPUT' && target.type === 'password') {
-      e.preventDefault();
+      // 尝试阻止默认的右键菜单
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch (err) {
+        // 如果阻止失败，不影响其他功能
+      }
+      
       currentPasswordInput = target;
       menu.style.display = 'block';
       
@@ -158,26 +224,6 @@ function addPasswordContextMenu() {
     }
   }
 
-  // 处理复制操作
-  async function handleCopy() {
-    if (!currentPasswordInput) return;
-    
-    const password = currentPasswordInput.value;
-    if (!password) {
-      showToast('密码为空', 'error');
-      return;
-    }
-
-    try {
-      await copyText(password);
-      showToast('已复制到剪贴板');
-    } catch (err) {
-      showToast('复制失败', 'error');
-    }
-    
-    menu.style.display = 'none';
-  }
-
   // 处理点击其他区域关闭菜单
   function handleClickOutside(e) {
     if (!menu.contains(e.target)) {
@@ -187,16 +233,29 @@ function addPasswordContextMenu() {
   }
 
   // 移除旧的事件监听器
-  document.removeEventListener('contextmenu', handleContextMenu);
   document.removeEventListener('click', handleClickOutside);
   const copyOption = menu.querySelector('div');
   const oldCopyOption = copyOption.cloneNode(true);
   menu.replaceChild(oldCopyOption, copyOption);
 
   // 添加新的事件监听器
-  document.addEventListener('contextmenu', handleContextMenu);
+  addEventsToPasswordInputs();
   document.addEventListener('click', handleClickOutside);
-  oldCopyOption.addEventListener('click', handleCopy);
+  oldCopyOption.addEventListener('click', () => handleCopy());
+
+  // 监听动态添加的密码输入框
+  const inputObserver = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+      if (mutation.addedNodes.length) {
+        addEventsToPasswordInputs();
+      }
+    });
+  });
+
+  inputObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 }
 
 // 初始化
