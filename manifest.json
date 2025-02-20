@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "密码复制助手",
   "version": "1.0",
-  "description": "一个简单易用的密码复制工具。在任何密码输入框的左侧添加复制按钮，点击即可复制密码内容。支持所有网站，无需配置。\n\n使用说明：\n1. 安装后自动在密码框左侧显示复制按钮(📋)\n2. 点击按钮即可复制密码\n3. 复制成功显示✅，失败显示❌\n4. 密码为空时会提示\n\n隐私说明：\n- 不收集任何用户数据\n- 源代码完全开源\n- 仅在用户点击时执行复制\n\n开源地址：https://github.com/knightgao/copy_passwd",
+  "description": "一个简单易用的密码复制工具。在密码输入框上右键点击即可快速复制密码内容。支持所有网站，无需配置。\n\n使用说明：\n1. 在任何密码输入框上点击右键\n2. 点击菜单中的复制密码选项\n3. 复制成功会有轻提示反馈\n\n隐私说明：\n- 不收集任何用户数据\n- 源代码完全开源\n- 仅在用户主动操作时执行复制\n\n开源地址：https://github.com/knightgao/copy_passwd",
   "homepage_url": "https://github.com/knightgao/copy_passwd",
   "permissions": [
     "activeTab",
@@ -12,7 +12,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "css": ["styles.css"]
+      "css": []
     }
   ],
   "icons": {

@@ -1,13 +1,32 @@
 // 复制文本的函数
 function copyText(text) {
-  // 创建临时输入框
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text)
+      .then(() => true)
+      .catch(() => fallbackCopyText(text));
+  }
+  return Promise.resolve(fallbackCopyText(text));
+}
+
+// 降级复制方案
+function fallbackCopyText(text) {
   const tempInput = document.createElement('textarea');
-  tempInput.style.position = 'fixed';
-  tempInput.style.opacity = '0';
+  tempInput.style.position = 'absolute';
+  tempInput.style.left = '-9999px';
+  tempInput.style.top = '0';
   tempInput.value = text;
-  document.body.appendChild(tempInput);
   
-  // 选择并复制
+  // 将临时输入框添加到一个新的容器中，避免影响现有布局
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '0';
+  container.style.top = '0';
+  container.style.width = '0';
+  container.style.height = '0';
+  container.style.overflow = 'hidden';
+  container.appendChild(tempInput);
+  document.body.appendChild(container);
+  
   tempInput.select();
   let success = false;
   
@@ -17,139 +36,192 @@ function copyText(text) {
     success = false;
   }
   
-  // 清理临时输入框
-  document.body.removeChild(tempInput);
+  document.body.removeChild(container);
   return success;
 }
 
-// 查找所有密码输入框并添加复制按钮
-function addCopyButton() {
-  const passwordInputs = document.querySelectorAll('input[type="password"]');
-  
-  passwordInputs.forEach((input, index) => {
-    // 检查是否已经添加过按钮
-    if (input.parentElement.querySelector('.password-copy-btn')) {
-      return;
-    }
-    
-    // 保存输入框的原始样式
-    const originalStyles = {
-      width: input.style.width,
-      marginLeft: input.style.marginLeft,
-      marginRight: input.style.marginRight
-    };
-    
-    // 创建外层容器
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'relative';
-    wrapper.style.display = 'inline-block';
-    wrapper.style.verticalAlign = 'middle';
-    
-    // 将输入框包装在容器中
-    input.parentNode.insertBefore(wrapper, input);
-    wrapper.appendChild(input);
-    
-    // 恢复输入框的原始样式
-    if (originalStyles.width) input.style.width = originalStyles.width;
-    if (originalStyles.marginLeft) input.style.marginLeft = originalStyles.marginLeft;
-    if (originalStyles.marginRight) input.style.marginRight = originalStyles.marginRight;
-    
-    // 创建复制按钮
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'password-copy-btn';
-    copyBtn.innerHTML = '📋';
-    copyBtn.type = 'button';
-    copyBtn.style.position = 'absolute';
-    copyBtn.style.left = '0';
-    copyBtn.style.top = '50%';
-    copyBtn.style.transform = 'translateY(-50%)';
-    copyBtn.style.background = '#fff';
-    copyBtn.style.border = '1px solid #ddd';
-    copyBtn.style.borderRadius = '3px';
-    copyBtn.style.cursor = 'pointer';
-    copyBtn.style.padding = '3px';
-    copyBtn.style.fontSize = '12px';
-    copyBtn.style.lineHeight = '1';
-    copyBtn.style.opacity = '0.8';
-    copyBtn.style.transition = 'all 0.2s';
-    copyBtn.style.zIndex = '1000';
-    copyBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
-    copyBtn.title = '复制密码';
-    
-    // 添加鼠标悬停效果
-    copyBtn.addEventListener('mouseover', () => {
-      copyBtn.style.opacity = '1';
-      copyBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
-    });
-    
-    copyBtn.addEventListener('mouseout', () => {
-      copyBtn.style.opacity = '0.8';
-      copyBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
-    });
-    
-    // 添加点击事件
-    copyBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const password = input.value;
-      if (!password) {
-        copyBtn.innerHTML = '❌';
-        copyBtn.title = '密码为空';
-        setTimeout(() => {
-          copyBtn.innerHTML = '📋';
-          copyBtn.title = '复制密码';
-        }, 1000);
-        return;
-      }
-      
-      let success = false;
-      
-      // 首先尝试使用 Clipboard API
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          await navigator.clipboard.writeText(password);
-          success = true;
-        } catch (err) {
-          // 如果 Clipboard API 失败，会在下面尝试备选方法
-        }
-      }
-      
-      // 如果 Clipboard API 失败，使用备选方法
-      if (!success) {
-        success = copyText(password);
-      }
-      
-      // 更新按钮状态
-      if (success) {
-        copyBtn.innerHTML = '✅';
-        copyBtn.title = '复制成功';
-      } else {
-        copyBtn.innerHTML = '❌';
-        copyBtn.title = '复制失败';
-      }
-      
-      // 恢复按钮状态
-      setTimeout(() => {
-        copyBtn.innerHTML = '📋';
-        copyBtn.title = '复制密码';
-      }, 1000);
-    });
-    
-    wrapper.appendChild(copyBtn);
+// 创建右键菜单（只创建一次）
+function createContextMenu() {
+  const menu = document.createElement('div');
+  menu.id = 'password-context-menu';
+  menu.style.position = 'fixed';
+  menu.style.display = 'none';
+  menu.style.background = '#fff';
+  menu.style.border = '1px solid #ddd';
+  menu.style.borderRadius = '4px';
+  menu.style.padding = '5px 0';
+  menu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  menu.style.zIndex = '10000';
+
+  const copyOption = document.createElement('div');
+  copyOption.textContent = '复制密码';
+  copyOption.style.padding = '8px 15px';
+  copyOption.style.cursor = 'pointer';
+  copyOption.style.fontSize = '14px';
+  copyOption.style.color = '#333';
+
+  copyOption.addEventListener('mouseover', () => {
+    copyOption.style.backgroundColor = '#f0f0f0';
   });
+
+  copyOption.addEventListener('mouseout', () => {
+    copyOption.style.backgroundColor = 'transparent';
+  });
+
+  menu.appendChild(copyOption);
+  return menu;
 }
 
-// 初始运行
-addCopyButton();
+// 创建Toast提示组件
+function createToast() {
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.bottom = '20px';
+  toast.style.left = '50%';
+  toast.style.transform = 'translateX(-50%)';
+  toast.style.padding = '8px 16px';
+  toast.style.background = 'rgba(0, 0, 0, 0.7)';
+  toast.style.color = '#fff';
+  toast.style.borderRadius = '4px';
+  toast.style.fontSize = '14px';
+  toast.style.transition = 'all 0.3s ease';
+  toast.style.zIndex = '100000';
+  toast.style.opacity = '0';
+  toast.style.pointerEvents = 'none';
+  document.body.appendChild(toast);
+  return toast;
+}
 
-// 监听 DOM 变化，处理动态加载的密码框
+// 显示Toast提示
+function showToast(message, type = 'success') {
+  let toast = document.getElementById('password-copy-toast');
+  if (!toast) {
+    toast = createToast();
+    toast.id = 'password-copy-toast';
+  }
+  
+  // 设置不同类型的提示样式
+  if (type === 'success') {
+    toast.style.background = 'rgba(40, 167, 69, 0.9)';
+  } else if (type === 'error') {
+    toast.style.background = 'rgba(220, 53, 69, 0.9)';
+  }
+  
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  
+  // 1.5秒后隐藏提示
+  setTimeout(() => {
+    toast.style.opacity = '0';
+  }, 1500);
+}
+
+// 添加右键菜单功能
+function addPasswordContextMenu() {
+  // 如果已经存在菜单，则不重复创建
+  let menu = document.getElementById('password-context-menu');
+  if (!menu) {
+    menu = createContextMenu();
+    document.body.appendChild(menu);
+  }
+
+  // 当前选中的密码输入框
+  let currentPasswordInput = null;
+
+  // 处理右键菜单事件
+  function handleContextMenu(e) {
+    const target = e.target;
+    if (target.tagName === 'INPUT' && target.type === 'password') {
+      e.preventDefault();
+      currentPasswordInput = target;
+      menu.style.display = 'block';
+      
+      // 确保菜单不会超出视窗
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const menuWidth = menu.offsetWidth;
+      const menuHeight = menu.offsetHeight;
+      
+      let left = e.pageX;
+      let top = e.pageY;
+      
+      if (left + menuWidth > viewportWidth) {
+        left = viewportWidth - menuWidth;
+      }
+      
+      if (top + menuHeight > viewportHeight) {
+        top = viewportHeight - menuHeight;
+      }
+      
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    }
+  }
+
+  // 处理复制操作
+  async function handleCopy() {
+    if (!currentPasswordInput) return;
+    
+    const password = currentPasswordInput.value;
+    if (!password) {
+      showToast('密码为空', 'error');
+      return;
+    }
+
+    try {
+      await copyText(password);
+      showToast('已复制到剪贴板');
+    } catch (err) {
+      showToast('复制失败', 'error');
+    }
+    
+    menu.style.display = 'none';
+  }
+
+  // 处理点击其他区域关闭菜单
+  function handleClickOutside(e) {
+    if (!menu.contains(e.target)) {
+      menu.style.display = 'none';
+      currentPasswordInput = null;
+    }
+  }
+
+  // 移除旧的事件监听器
+  document.removeEventListener('contextmenu', handleContextMenu);
+  document.removeEventListener('click', handleClickOutside);
+  const copyOption = menu.querySelector('div');
+  const oldCopyOption = copyOption.cloneNode(true);
+  menu.replaceChild(oldCopyOption, copyOption);
+
+  // 添加新的事件监听器
+  document.addEventListener('contextmenu', handleContextMenu);
+  document.addEventListener('click', handleClickOutside);
+  oldCopyOption.addEventListener('click', handleCopy);
+}
+
+// 初始化
+addPasswordContextMenu();
+
+// 监听 DOM 变化
 const observer = new MutationObserver((mutations) => {
+  let shouldReinit = false;
   mutations.forEach((mutation) => {
     if (mutation.addedNodes.length) {
-      addCopyButton();
+      // 检查是否添加了新的密码输入框
+      mutation.addedNodes.forEach(node => {
+        if (node.querySelectorAll) {
+          const passwordInputs = node.querySelectorAll('input[type="password"]');
+          if (passwordInputs.length > 0) {
+            shouldReinit = true;
+          }
+        }
+      });
     }
   });
+  
+  if (shouldReinit) {
+    addPasswordContextMenu();
+  }
 });
 
 observer.observe(document.body, {
